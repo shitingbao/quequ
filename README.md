@@ -4,6 +4,7 @@
 参考项目  
 1.[queue](https://github.com/yireyun/go-queue)  
 2.[ringbuffer](https://github.com/smallnest/ringbuffer)
+3.[goqueue]( https://github.com/bighunter513/goqueue)
 
 ## 基本思路
 
