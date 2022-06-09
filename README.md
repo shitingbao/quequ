@@ -1,6 +1,6 @@
 # quequ
 
-一个无锁的队列，
+一个无锁线程安全的队列，
 参考项目  
 1.[queue](https://github.com/yireyun/go-queue)  
 2.[ringbuffer](https://github.com/smallnest/ringbuffer)
