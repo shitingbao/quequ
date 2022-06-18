@@ -102,7 +102,11 @@ func (q *DefaultQueue) Put(val interface{}) (ok bool, count uint32) {
 	for {
 		readID := cache.readID.Load()
 		writeID := cache.writeID.Load()
-		if posNext == writeID && readID == writeID { //  posNext == writeID 是因为putID 一开始初始化的时候就加入了顺序的位置，和读写的位置相对应，下面加上一个容量的长度，含义是，读写的位置再次读到这个位置，已经是下一轮了
+
+		// posNext == writeID 是因为putID 一开始初始化的时候就加入了顺序的位置，和读写的位置相对应，下面加上一个容量的长度，含义是，读写的位置再次读到这个位置，已经是下一轮了
+		// readID == writeID 表示还是空的，如果有写入 writeID 就会 add 一个长度就会比 readID 大，由此来标记获取到锁后该槽是否为空
+		// 同时这里为什么放在 for 里面也是这个原因，可能情况是读的操作到了这个槽的位置，但是他还没来得及写进去（已经获取到锁的状态），那就要for 多试几次，读和写同理
+		if posNext == writeID && readID == writeID {  
 			cache.value = val
 			cache.writeID.Add(q.cap)
 			return true, cnt + 1
@@ -125,6 +129,7 @@ func (q *DefaultQueue) Put(val interface{}) (ok bool, count uint32) {
 			// =======================================================
 			// 本来为了让其他操作不过度等待加的数据丢弃，发现这部分在大量 put （出现内扣一圈，这个位置又被put），不能保证原子性（因为获取锁和写入分离）
 			// 这个 else 里的 q.Get() 不能保证取到放入的数据，可能数据还没放进去
+			// 也就是说，如果在大量写入的情况下，相同位置被下一个循环覆盖写入
 			runtime.Gosched()
 		}
 
