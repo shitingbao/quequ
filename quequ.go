@@ -31,10 +31,10 @@ type Queue interface {
 	// Puts(values []interface{}) (puts, count uint32)
 }
 
-//队列的槽，每个槽有一个 writeID 和 readID
-//当输入新值时，putID将增加cap，这意味着它有值
-//只有 readID + cap == writeID ，才能从此插槽中获取值，然后 readID 增加 cap，cap 是队列容量，加上 cap 是为了对应下次读写的位置再到该位置
-//当 readID == writeID 时，此插槽为空
+// 队列的槽，每个槽有一个 writeID 和 readID
+// 当输入新值时，putID将增加cap，这意味着它有值
+// 只有 readID + cap == writeID ，才能从此插槽中获取值，然后 readID 增加 cap，cap 是队列容量，加上 cap 是为了对应下次读写的位置再到该位置
+// 当 readID == writeID 时，此插槽为空
 type slot struct {
 	writeID *atomic.Uint32 // write + n 倍的容量
 	readID  *atomic.Uint32 // write + n 倍的容量
@@ -106,7 +106,7 @@ func (q *DefaultQueue) Put(val interface{}) (ok bool, count uint32) {
 		// posNext == writeID 是因为putID 一开始初始化的时候就加入了顺序的位置，和读写的位置相对应，下面加上一个容量的长度，含义是，读写的位置再次读到这个位置，已经是下一轮了
 		// readID == writeID 表示还是空的，如果有写入 writeID 就会 add 一个长度就会比 readID 大，由此来标记获取到锁后该槽是否为空
 		// 同时这里为什么放在 for 里面也是这个原因，可能情况是读的操作到了这个槽的位置，但是他还没来得及写进去（已经获取到锁的状态），那就要for 多试几次，读和写同理
-		if posNext == writeID && readID == writeID {  
+		if posNext == writeID && readID == writeID {
 			cache.value = val
 			cache.writeID.Add(q.cap)
 			return true, cnt + 1
@@ -190,12 +190,16 @@ func (q *DefaultQueue) minRoundNumBy2(v uint32) uint32 {
 		v = MinCap
 	}
 
-	v-- // --为了防止刚刚好最大值时溢出，下列操作后所有位上都是1，最后 ++ 如果一开始就是占了最大的长度，就会溢出
 	v |= v >> 1
 	v |= v >> 2
 	v |= v >> 4
 	v |= v >> 8
 	v |= v >> 16
-	v++
+
+	if v&1 == 1 {
+		v-- // --为了防止刚刚好最大值时溢出，上列操作后所有位上都是1，最后 ++ 如果一开始就是占了最大的长度，就会溢出
+	} else {
+		v++
+	}
 	return v
 }
