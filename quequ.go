@@ -196,7 +196,7 @@ func (q *DefaultQueue) minRoundNumBy2(v uint32) uint32 {
 	v |= v >> 8
 	v |= v >> 16
 
-	if v&1 == 1 {
+	if ^v == 0 {
 		v-- // --为了防止刚刚好最大值时溢出，上列操作后所有位上都是1，最后 ++ 如果一开始就是占了最大的长度，就会溢出
 	} else {
 		v++
