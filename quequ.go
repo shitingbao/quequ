@@ -108,9 +108,11 @@ func (q *DefaultQueue) Put(val interface{}) (ok bool, count uint32) {
 		// 同时这里为什么放在 for 里面也是这个原因，可能情况是读的操作到了这个槽的位置，但是他还没来得及写进去（已经获取到锁的状态），那就要for 多试几次，读和写同理
 		if posNext == writeID && readID == writeID {
 			cache.value = val
-			cache.writeID.Add(q.cap)
+			cache.writeID.Add(q.cap) // 为什么不需要锁，当读与写都在一个位置的时候，因为这里加上一个 cap，在 get 的时候判断是否有增加过 cap 来判断是否已经赋值完毕，光获取到当前的 write 标识还不够
 			return true, cnt + 1
 		} else {
+			// @review 是否要加失败跳出待定
+
 			// 存线程的竞争过多，而队列cap过小，前面的如果写数据动作比较慢，而后来的进程已经lock到这个位置的下一轮了
 			// 此时，这个位置等于已经被他预约了，但是数据还没取走，需要等待下次get了数据之后，才能重新put
 			// 所以就先让出cpu，等待下次调度
